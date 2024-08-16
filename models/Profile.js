@@ -22,7 +22,7 @@ const profileSchema = new mongoose.Schema({
   motherDetails: String,
   siblingDetails: String,
   package: String,
-  photos: [{ type: String }],
+  photos: [{ type: String }], // URLs for photos will be stored here
   user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
 });
 

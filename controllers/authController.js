@@ -1,8 +1,7 @@
-const User = require("models/User");
-const Profile = require("models/Profile");
+const User = require("../models/User");
+const Profile = require("../models/Profile");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const nodemailer = require("nodemailer");
 
 // Register User
 exports.registerUser = async (req, res) => {
@@ -14,7 +13,11 @@ exports.registerUser = async (req, res) => {
     if (user) return res.status(400).json({ message: "User already exists" });
 
     // Create profile
-    const profile = new Profile(profileData);
+    const profile = new Profile({
+      ...profileData,
+      photos: [], // Initialize empty photos array
+    });
+
     await profile.save();
 
     // Create user with status pending approval
@@ -23,6 +26,7 @@ exports.registerUser = async (req, res) => {
       password: "", // Empty until approved
       profile: profile._id,
     });
+
     await user.save();
 
     res.status(201).json({ message: "Profile submitted, pending approval" });
