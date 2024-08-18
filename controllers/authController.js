@@ -2,15 +2,23 @@ const User = require("../models/User");
 const Profile = require("../models/Profile");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const mongoose = require("mongoose");
 
 // Register User
 exports.registerUser = async (req, res) => {
   const { email, ...profileData } = req.body;
 
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     // Check if email exists
     let user = await User.findOne({ email });
-    if (user) return res.status(400).json({ message: "User already exists" });
+    if (user) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ message: "User already exists" });
+    }
 
     // Create profile
     const profile = new Profile({
@@ -18,19 +26,25 @@ exports.registerUser = async (req, res) => {
       photos: [], // Initialize empty photos array
     });
 
-    await profile.save();
+    await profile.save({ session });
 
     // Create user with status pending approval
     user = new User({
       email,
+      username: "",
       password: "", // Empty until approved
       profile: profile._id,
     });
 
-    await user.save();
+    await user.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
 
     res.status(201).json({ message: "Profile submitted, pending approval" });
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     console.error(error);
     res.status(500).json({ message: "Server Error" });
   }

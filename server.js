@@ -29,7 +29,7 @@ app.use(morgan("dev"));
 
 // Routes
 app.use("/api/auth", require("./routes/authRoutes"));
-// app.use("/api/admin", require("./routes/adminRoutes"));
+app.use("/api/admin", require("./routes/adminRoutes"));
 app.use("/api/profiles", require("./routes/profileRoutes"));
 // app.use("/api/matchmaking", require("./routes/matchmaking"));
 

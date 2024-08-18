@@ -5,7 +5,6 @@ const UserSchema = new mongoose.Schema(
   {
     username: {
       type: String,
-      unique: true,
     },
     email: {
       type: String,
@@ -24,6 +23,10 @@ const UserSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Profile",
       required: true,
+    },
+    isSuspended: {
+      type: Boolean,
+      default: false, // Default is false, meaning the user is not suspended by default
     },
   },
   { timestamps: true }
