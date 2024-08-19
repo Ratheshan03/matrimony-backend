@@ -1,5 +1,10 @@
 const Profile = require("../models/Profile");
 const User = require("../models/User");
+const {
+  generateUsername,
+  generatePassword,
+} = require("../utils/generateCredentials");
+const { sendApprovalEmail } = require("../services/emailService");
 
 exports.getAllProfiles = async (req, res) => {
   try {
@@ -34,11 +39,33 @@ exports.approveProfile = async (req, res) => {
     if (!profile) {
       return res.status(404).json({ message: "Profile not found" });
     }
+
+    const user = await User.findOne({ profile: req.params.id });
+    if (!user) {
+      return res.status(404).json({ message: "Associated user not found" });
+    }
+
+    // Generate unique username and password
+    const username = await generateUsername(profile.name, user.email);
+    const { tempPassword, hashedPassword } = await generatePassword();
+
+    // Update user with temporary credentials
+    user.username = username;
+    user.password = hashedPassword;
+    await user.save();
+
+    // Send approval email with temporary credentials
+    await sendApprovalEmail(user, tempPassword);
+
+    // Mark profile as approved
     profile.isApproved = true;
     await profile.save();
-    res.status(200).json({ message: "Profile approved successfully" });
+
+    res
+      .status(200)
+      .json({ message: "Profile approved and email sent successfully" });
   } catch (err) {
-    res.status(500).json({ message: "Server Error" });
+    res.status(500).json({ message: "Server Error", error: err.message });
   }
 };
 
