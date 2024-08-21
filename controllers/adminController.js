@@ -47,11 +47,12 @@ exports.approveProfile = async (req, res) => {
 
     // Generate unique username and password
     const username = await generateUsername(profile.name, user.email);
-    const { tempPassword, hashedPassword } = await generatePassword();
+    const tempPassword = generatePassword();
 
     // Update user with temporary credentials
     user.username = username;
-    user.password = hashedPassword;
+    user.password = tempPassword;
+    user.isApproved = true;
     await user.save();
 
     // Send approval email with temporary credentials
@@ -65,6 +66,7 @@ exports.approveProfile = async (req, res) => {
       .status(200)
       .json({ message: "Profile approved and email sent successfully" });
   } catch (err) {
+    console.error("Error approving profile:", err);
     res.status(500).json({ message: "Server Error", error: err.message });
   }
 };

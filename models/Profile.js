@@ -37,7 +37,7 @@ const profileSchema = new mongoose.Schema(
       ],
     },
     package: String,
-    photos: [{ type: String }], // URLs for photos will be stored here
+    photos: [{ type: String }],
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     isApproved: {
       // Field to track whether a profile is approved

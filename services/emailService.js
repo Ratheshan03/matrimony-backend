@@ -44,4 +44,24 @@ const sendApprovalEmail = async (user, tempPassword) => {
   await transporter.sendMail(mailOptions);
 };
 
+exports.sendPasswordResetEmail = async (email, resetUrl) => {
+  const mailOptions = {
+    from: process.env.EMAIL,
+    to: email,
+    subject: "Password Reset Request",
+    text: `You are receiving this because you (or someone else) have requested the reset of the password for your account. 
+    Please click on the following link, or paste this into your browser to complete the process: 
+    ${resetUrl} 
+    If you did not request this, please ignore this email and your password will remain unchanged.`,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log("Password reset email sent successfully");
+  } catch (error) {
+    console.error("Error sending email:", error);
+    throw error;
+  }
+};
+
 module.exports = { sendApprovalEmail };

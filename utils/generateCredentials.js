@@ -19,11 +19,9 @@ const generateUsername = async (name, email) => {
   return username;
 };
 
-const generatePassword = async () => {
-  const tempPassword = Math.random().toString(36).slice(-8); // generate a random 8-character password
-  const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(tempPassword, salt);
-  return { tempPassword, hashedPassword };
+const generatePassword = () => {
+  const tempPassword = Math.random().toString(36).slice(-8);
+  return tempPassword;
 };
 
 module.exports = { generateUsername, generatePassword };

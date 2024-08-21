@@ -26,8 +26,24 @@ const UserSchema = new mongoose.Schema(
     },
     isSuspended: {
       type: Boolean,
-      default: false, // Default is false, meaning the user is not suspended by default
+      default: false,
     },
+    isApproved: {
+      type: Boolean,
+      default: false,
+    },
+    resetPasswordToken: {
+      type: String,
+    },
+    resetPasswordExpires: {
+      type: Date,
+    },
+    refreshTokens: [
+      {
+        token: String,
+        expires: Date,
+      },
+    ],
   },
   { timestamps: true }
 );
@@ -35,12 +51,13 @@ const UserSchema = new mongoose.Schema(
 // Encrypt password before saving the user
 UserSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {
-    next();
+    return next();
   }
   if (this.password) {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
   }
+  next();
 });
 
 module.exports = mongoose.model("User", UserSchema);

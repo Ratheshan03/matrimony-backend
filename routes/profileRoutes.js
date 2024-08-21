@@ -3,11 +3,47 @@ const router = express.Router();
 const profileController = require("../controllers/profileController");
 const authMiddleware = require("../middlewares/authMiddleware");
 
+// Display all approved profiles with limited info (Non-Logged-In Users)
+router.get(
+  "/approved-profiles-limited",
+  profileController.getApprovedProfilesLimited
+);
+
+// Display all approved profiles with full info (Logged-In Users)
+router.get(
+  "/approved-profiles-full",
+  authMiddleware.protect,
+  profileController.getApprovedProfilesFull
+);
+
+// Update Profile
 router.put("/update", authMiddleware.protect, profileController.updateProfile);
+
+// Upload Photo
 router.post(
   "/upload-photo",
   authMiddleware.protect,
   profileController.uploadPhoto
+);
+
+// Remove Photo
+router.delete(
+  "/remove-photo",
+  authMiddleware.protect,
+  profileController.removePhoto
+);
+
+// Search Profiles
+router.get("/search", profileController.searchProfiles);
+
+// View Profile Details
+router.get("/:id", profileController.getProfileDetails);
+
+// Mark Profile as Favorite
+router.post(
+  "/mark-favorite/:id",
+  authMiddleware.protect,
+  profileController.markAsFavorite
 );
 
 module.exports = router;

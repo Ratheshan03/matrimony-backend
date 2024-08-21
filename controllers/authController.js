@@ -3,6 +3,18 @@ const Profile = require("../models/Profile");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
+const crypto = require("crypto"); // For generating reset tokens
+
+// JWT and Refresh Token secret
+const JWT_SECRET = process.env.JWT_SECRET;
+const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
+
+// Token expiry times
+const JWT_EXPIRATION = "1h";
+const REFRESH_TOKEN_EXPIRATION = "7d";
+
+// In-memory store for refresh tokens (consider using a persistent store in production)
+let refreshTokens = [];
 
 // Register User
 exports.registerUser = async (req, res) => {
@@ -50,29 +62,6 @@ exports.registerUser = async (req, res) => {
   }
 };
 
-// Admin approves user and sends credentials
-exports.approveUser = async (req, res) => {
-  const { userId, temporaryPassword } = req.body;
-
-  try {
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    user.password = await bcrypt.hash(temporaryPassword, 10);
-    user.isApproved = true;
-    await user.save();
-
-    // Send email with credentials
-    // Implement email logic with Nodemailer or similar
-    // await sendEmail(user.email, temporaryPassword);
-
-    res.status(200).json({ message: "User approved and credentials sent" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server Error" });
-  }
-};
-
 // Login User
 exports.loginUser = async (req, res) => {
   const { email, password } = req.body;
@@ -90,11 +79,127 @@ exports.loginUser = async (req, res) => {
 
     const token = jwt.sign(
       { userId: user._id, isAdmin: user.isAdmin },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" }
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRATION }
     );
 
-    res.status(200).json({ token });
+    const refreshToken = jwt.sign({ userId: user._id }, REFRESH_TOKEN_SECRET, {
+      expiresIn: REFRESH_TOKEN_EXPIRATION,
+    });
+
+    // Save refresh token to user's document
+    user.refreshTokens.push({
+      token: refreshToken,
+      expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
+    });
+    await user.save();
+
+    res.status(200).json({ token, refreshToken });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
+// Logout User
+exports.logoutUser = async (req, res) => {
+  const { refreshToken } = req.body;
+
+  try {
+    const user = await User.findOneAndUpdate(
+      { "refreshTokens.token": refreshToken },
+      { $pull: { refreshTokens: { token: refreshToken } } }
+    );
+
+    if (!user)
+      return res.status(400).json({ message: "Invalid refresh token" });
+
+    res.status(200).json({ message: "User logged out successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
+// Refresh Token
+exports.refreshToken = async (req, res) => {
+  const { token } = req.body;
+
+  try {
+    const user = await User.findOne({
+      "refreshTokens.token": token,
+      "refreshTokens.expires": { $gt: Date.now() }, // Ensure token is not expired
+    });
+
+    if (!user)
+      return res
+        .status(403)
+        .json({ message: "Invalid or expired refresh token" });
+
+    const decoded = jwt.verify(token, REFRESH_TOKEN_SECRET);
+    const accessToken = jwt.sign(
+      { userId: decoded.userId, isAdmin: decoded.isAdmin },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRATION }
+    );
+
+    res.status(200).json({ accessToken });
+  } catch (error) {
+    console.error(error);
+    res.status(403).json({ message: "Invalid refresh token" });
+  }
+};
+
+// Request Password Reset
+exports.requestPasswordReset = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Generate password reset token
+    const resetToken = crypto.randomBytes(20).toString("hex");
+
+    // Set token and expiration on the user document
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+
+    await user.save();
+
+    // Send reset email
+    const resetUrl = `http://${req.headers.host}/auth/reset-password/${resetToken}`;
+    await emailService.sendPasswordResetEmail(user.email, resetUrl);
+
+    res.status(200).json({ message: "Password reset link sent" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
+// Reset Password
+exports.resetPassword = async (req, res) => {
+  const { token } = req.params;
+  const { newPassword } = req.body;
+
+  try {
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() },
+    });
+
+    if (!user)
+      return res.status(400).json({ message: "Invalid or expired token" });
+
+    // Hash new password and update user
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+
+    await user.save();
+
+    res.status(200).json({ message: "Password has been reset successfully" });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server Error" });
