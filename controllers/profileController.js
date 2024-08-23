@@ -5,7 +5,7 @@ const bucket = require("../config/gcs");
 exports.getApprovedProfilesLimited = async (req, res) => {
   try {
     const profiles = await Profile.find({ isApproved: true }).select(
-      "name height age maritalStatus"
+      "name dob height age maritalStatus"
     );
     res.status(200).json(profiles);
   } catch (error) {
@@ -36,6 +36,7 @@ exports.updateProfile = async (req, res) => {
     );
 
     res.status(200).json(updatedProfile);
+    //{ message: "Updated Profile Successfully" }
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server Error" });

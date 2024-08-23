@@ -13,9 +13,6 @@ const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
 const JWT_EXPIRATION = "1h";
 const REFRESH_TOKEN_EXPIRATION = "7d";
 
-// In-memory store for refresh tokens (consider using a persistent store in production)
-let refreshTokens = [];
-
 // Register User
 exports.registerUser = async (req, res) => {
   const { email, ...profileData } = req.body;
@@ -44,7 +41,7 @@ exports.registerUser = async (req, res) => {
     user = new User({
       email,
       username: "",
-      password: "", // Empty until approved
+      password: "",
       profile: profile._id,
     });
 
@@ -77,6 +74,11 @@ exports.loginUser = async (req, res) => {
     if (!isMatch)
       return res.status(400).json({ message: "Invalid credentials" });
 
+    // Clean up expired refresh tokens
+    user.refreshTokens = user.refreshTokens.filter(
+      (tokenObj) => tokenObj.expires > Date.now()
+    );
+
     const token = jwt.sign(
       { userId: user._id, isAdmin: user.isAdmin },
       JWT_SECRET,
@@ -87,11 +89,17 @@ exports.loginUser = async (req, res) => {
       expiresIn: REFRESH_TOKEN_EXPIRATION,
     });
 
-    // Save refresh token to user's document
+    // Save new refresh token to user's document
     user.refreshTokens.push({
       token: refreshToken,
-      expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
+      expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days from now
     });
+
+    // Limit the number of stored refresh tokens
+    if (user.refreshTokens.length > 5) {
+      user.refreshTokens = user.refreshTokens.slice(-5);
+    }
+
     await user.save();
 
     res.status(200).json({ token, refreshToken });
