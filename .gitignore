@@ -39,3 +39,6 @@ pnpm-debug.log*
 
 # Build output
 dist/
+
+#firebase
+firebase.json

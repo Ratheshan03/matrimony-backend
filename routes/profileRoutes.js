@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const profileController = require("../controllers/profileController");
 const authMiddleware = require("../middlewares/authMiddleware");
+const upload = require("../middleware/uploadMiddleware");
 
 // Display all approved profiles with limited info (Non-Logged-In Users)
 router.get(
@@ -19,19 +20,22 @@ router.get(
 // Update Profile
 router.put("/update", authMiddleware.protect, profileController.updateProfile);
 
-// Upload Photo
+// Route to upload profile photo
 router.post(
-  "/upload-photo",
-  authMiddleware.protect,
-  profileController.uploadPhoto
+  "/upload-profile-photo",
+  upload.single("photo"),
+  profileController.uploadProfilePhoto
 );
 
-// Remove Photo
-router.delete(
-  "/remove-photo",
-  authMiddleware.protect,
-  profileController.removePhoto
+// Route to upload additional photos
+router.post(
+  "/upload-additional-photo",
+  upload.single("photo"),
+  profileController.uploadAdditionalPhoto
 );
+
+// Route to remove a photo (profile or additional)
+router.post("/remove-photo", profileController.removePhoto);
 
 // Search Profiles
 router.get("/search", profileController.searchProfiles);
