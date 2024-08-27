@@ -41,4 +41,5 @@ pnpm-debug.log*
 dist/
 
 #firebase
+config/firebaseConfig.js
 firebase.json
