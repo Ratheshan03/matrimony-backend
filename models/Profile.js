@@ -37,10 +37,10 @@ const profileSchema = new mongoose.Schema(
       ],
     },
     package: String,
-    photos: [{ type: String }],
+    profilePhoto: String,
+    additionalPhotos: [{ type: String }],
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     isApproved: {
-      // Field to track whether a profile is approved
       type: Boolean,
       default: false,
     },

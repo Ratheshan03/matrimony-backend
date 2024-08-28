@@ -42,10 +42,14 @@ exports.registerUser = async (req, res) => {
       email,
       username: "",
       password: "",
-      profile: profile._id,
+      profile: profile._id, // Link User to Profile
     });
 
     await user.save({ session });
+
+    // Update profile to link it to the user
+    profile.user = user._id; // Link Profile to User
+    await profile.save({ session });
 
     await session.commitTransaction();
     session.endSession();
