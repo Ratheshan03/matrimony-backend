@@ -44,16 +44,23 @@ router.post(
 );
 
 // Search Profiles
-router.get("/search", profileController.searchProfiles);
+router.get("/search", authMiddleware.protect, profileController.searchProfiles);
 
 // View Profile Details
-router.get("/:id", profileController.getProfileDetails);
+router.get("/:id", authMiddleware.protect, profileController.getProfileDetails);
 
-// Mark Profile as Favorite
+// Mark a profile as favorite
 router.post(
-  "/mark-favorite/:id",
+  "/favorite",
   authMiddleware.protect,
   profileController.markAsFavorite
+);
+
+// View favorite profiles
+router.get(
+  "/favorites",
+  authMiddleware.protect,
+  profileController.viewFavoriteProfiles
 );
 
 module.exports = router;

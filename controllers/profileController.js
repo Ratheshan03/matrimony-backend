@@ -212,48 +212,145 @@ exports.removePhoto = async (req, res) => {
   }
 };
 
-// Search Profiles
+// Search Profiles with filters within approved profiles
 exports.searchProfiles = async (req, res) => {
   try {
-    const searchCriteria = req.query;
-    const profiles = await Profile.find({
-      ...searchCriteria,
+    const {
+      ageRange,
+      gender,
+      maritalStatus,
+      religion,
+      country,
+      occupation,
+      education,
+      heightRange,
+      name,
+    } = req.query;
+
+    // Initialize search criteria with only approved profiles
+    const searchCriteria = {
       isApproved: true,
-    }).select("name height age maritalStatus");
+    };
+
+    // Add optional filters based on user input
+    if (ageRange) {
+      const [minAge, maxAge] = ageRange.split("-").map(Number);
+      const currentYear = new Date().getFullYear();
+      searchCriteria.dob = {
+        $gte: new Date(currentYear - maxAge, 0, 1),
+        $lte: new Date(currentYear - minAge, 11, 31),
+      };
+    }
+
+    if (gender) searchCriteria.gender = gender;
+    if (maritalStatus) searchCriteria.maritalStatus = maritalStatus;
+    if (religion) searchCriteria.religion = religion;
+    if (country) searchCriteria.country = country;
+    if (occupation) searchCriteria.occupation = occupation;
+    if (education) searchCriteria.educationalLevel = education;
+    if (heightRange) {
+      const [minHeight, maxHeight] = heightRange.split("-").map(Number);
+      searchCriteria.height = { $gte: minHeight, $lte: maxHeight };
+    }
+    if (name) searchCriteria.name = new RegExp(name, "i"); // Case-insensitive name search
+
+    const profiles = await Profile.find(searchCriteria).select(
+      "name dob gender maritalStatus height country religion occupation educationalLevel profilePhoto"
+    );
 
     res.status(200).json(profiles);
   } catch (error) {
-    console.error(error);
+    console.error("Error in searchProfiles:", error);
     res.status(500).json({ message: "Server Error" });
   }
 };
 
-// View Profile Details
+// View Profile Details (for logged-in users only)
 exports.getProfileDetails = async (req, res) => {
   try {
-    const profile = await Profile.findById(req.params.id).populate("user");
+    const { userId } = req.user; // Assuming `req.user` contains authenticated user info
+    const profileId = req.params.id;
+
+    // Fetch the profile without populating the `user` field
+    const profile = await Profile.findById(profileId).select("-user");
+
     if (!profile) return res.status(404).json({ message: "Profile not found" });
+
+    // Check if profile is approved or the user owns it
+    if (!profile.isApproved && profile.user._id.toString() !== userId) {
+      return res.status(403).json({ message: "Access Denied" });
+    }
 
     res.status(200).json(profile);
   } catch (error) {
-    console.error(error);
+    console.error("Error in getProfileDetails:", error);
     res.status(500).json({ message: "Server Error" });
   }
 };
 
-// Mark Profile as Favorite
+// Mark a Profile as Favorite
 exports.markAsFavorite = async (req, res) => {
   try {
-    const { userId } = req.user;
-    const profile = await Profile.findById(req.params.id);
-    if (!profile) return res.status(404).json({ message: "Profile not found" });
+    const userId = req.user.id; // Get the logged-in user ID from the request
+    const { profileId } = req.body; // The profile to be marked as favorite
 
-    profile.favorites.push(userId);
-    await profile.save();
+    console.log("User ID:", userId);
+    console.log("Profile ID to mark as favorite:", profileId);
 
-    res.status(200).json({ message: "Profile marked as favorite" });
+    // Find the user's profile by user ID
+    const userProfile = await Profile.findOne({ user: userId });
+
+    if (!userProfile) {
+      console.log("User profile not found for user ID:", userId);
+      return res.status(404).json({ message: "User profile not found" });
+    }
+
+    // Ensure the profile to be marked as favorite exists
+    const profileToFavorite = await Profile.findById(profileId);
+    if (!profileToFavorite) {
+      return res
+        .status(404)
+        .json({ message: "Profile to be favorited not found" });
+    }
+
+    // Check if the profile is already in favorites
+    if (userProfile.favorites.includes(profileId)) {
+      return res
+        .status(400)
+        .json({ message: "Profile is already in favorites" });
+    }
+
+    // Add the profile to favorites
+    userProfile.favorites.push(profileId);
+    await userProfile.save();
+
+    res
+      .status(200)
+      .json({ message: "Profile marked as favorite successfully" });
   } catch (error) {
-    console.error(error);
+    console.error("Error in markAsFavorite:", error);
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
+// View Favorite Profiles
+exports.viewFavoriteProfiles = async (req, res) => {
+  try {
+    const userId = req.user.id; // Get the logged-in user ID from the request
+
+    // Find the user's profile by user ID
+    const userProfile = await Profile.findOne({ user: userId }).populate(
+      "favorites",
+      "name dob gender maritalStatus profilePhoto"
+    );
+
+    if (!userProfile) {
+      return res.status(404).json({ message: "User profile not found" });
+    }
+
+    res.status(200).json(userProfile.favorites);
+  } catch (error) {
+    console.error("Error in viewFavoriteProfiles:", error);
     res.status(500).json({ message: "Server Error" });
   }
 };
