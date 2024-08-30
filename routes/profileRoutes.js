@@ -46,9 +46,6 @@ router.post(
 // Search Profiles
 router.get("/search", authMiddleware.protect, profileController.searchProfiles);
 
-// View Profile Details
-router.get("/:id", authMiddleware.protect, profileController.getProfileDetails);
-
 // Mark a profile as favorite
 router.post(
   "/favorite",
@@ -62,5 +59,8 @@ router.get(
   authMiddleware.protect,
   profileController.viewFavoriteProfiles
 );
+
+// View Profile Details
+router.get("/:id", authMiddleware.protect, profileController.getProfileDetails);
 
 module.exports = router;

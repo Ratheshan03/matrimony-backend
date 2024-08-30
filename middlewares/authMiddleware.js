@@ -24,10 +24,10 @@ exports.protect = async (req, res, next) => {
         .json({ message: "Not authorized, user not found" });
     }
 
-    req.user = { userId: user._id.toString() }; // Correctly set `userId`
+    req.user = { userId: user._id.toString() };
 
-    // Logging for debugging
-    // console.log("Decoded ID:", decoded.userId);
+    //Logging for debugging
+    console.log("Decoded ID:", decoded.userId);
     // console.log("User found:", user);
 
     next();

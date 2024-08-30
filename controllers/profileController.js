@@ -291,11 +291,11 @@ exports.getProfileDetails = async (req, res) => {
 // Mark a Profile as Favorite
 exports.markAsFavorite = async (req, res) => {
   try {
-    const userId = req.user.id; // Get the logged-in user ID from the request
+    const { userId } = req.user;
     const { profileId } = req.body; // The profile to be marked as favorite
 
-    console.log("User ID:", userId);
-    console.log("Profile ID to mark as favorite:", profileId);
+    // console.log("User ID:", userId);
+    // console.log("Profile ID to mark as favorite:", profileId);
 
     // Find the user's profile by user ID
     const userProfile = await Profile.findOne({ user: userId });
@@ -336,13 +336,16 @@ exports.markAsFavorite = async (req, res) => {
 // View Favorite Profiles
 exports.viewFavoriteProfiles = async (req, res) => {
   try {
-    const userId = req.user.id; // Get the logged-in user ID from the request
+    const { userId } = req.user;
 
     // Find the user's profile by user ID
     const userProfile = await Profile.findOne({ user: userId }).populate(
       "favorites",
       "name dob gender maritalStatus profilePhoto"
     );
+
+    // console.log("User Profile:", userProfile);
+    // console.log("Favorites:", userProfile?.favorites);
 
     if (!userProfile) {
       return res.status(404).json({ message: "User profile not found" });
