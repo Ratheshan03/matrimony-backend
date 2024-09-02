@@ -1,12 +1,29 @@
 const Profile = require("../models/Profile");
 const bucket = require("../config/gcs");
+const redisClient = require("../config/redisClient");
 
 // Display all approved profiles
 exports.getApprovedProfilesLimited = async (req, res) => {
   try {
+    // Check cache first
+    const cacheKey = "approvedProfilesLimited";
+    const cachedData = await redisClient.get(cacheKey);
+
+    if (cachedData) {
+      // Return cached data if available
+      return res.status(200).json(JSON.parse(cachedData));
+    }
+
+    // Fetch from database if not cached
     const profiles = await Profile.find({ isApproved: true }).select(
       "name dob height age maritalStatus"
     );
+
+    // Cache the result with an expiry time (e.g., 1 hour)
+    await redisClient.set(cacheKey, JSON.stringify(profiles), {
+      EX: 3600, // Expire after 1 hour
+    });
+
     res.status(200).json(profiles);
   } catch (error) {
     console.error(error);
@@ -17,7 +34,19 @@ exports.getApprovedProfilesLimited = async (req, res) => {
 // Display all approved profiles with full info
 exports.getApprovedProfilesFull = async (req, res) => {
   try {
+    const cacheKey = "approvedProfilesFull";
+    const cachedData = await redisClient.get(cacheKey);
+
+    if (cachedData) {
+      return res.status(200).json(JSON.parse(cachedData));
+    }
+
     const profiles = await Profile.find({ isApproved: true }).populate("user");
+
+    await redisClient.set(cacheKey, JSON.stringify(profiles), {
+      EX: 3600, // Expire after 1 hour
+    });
+
     res.status(200).json(profiles);
   } catch (error) {
     console.error(error);
