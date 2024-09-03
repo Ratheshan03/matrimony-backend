@@ -5,7 +5,8 @@ const { loginRateLimiter } = require("../middlewares/rateLimiter");
 
 // Register, Login, and Admin Approval
 router.post("/register", authController.registerUser);
-router.post("/login", loginRateLimiter, authController.loginUser);
+router.post("/login", authController.loginUser);
+// router.post("/login", loginRateLimiter, authController.loginUser);
 
 // Password Reset
 router.post("/request-password-reset", authController.requestPasswordReset);
